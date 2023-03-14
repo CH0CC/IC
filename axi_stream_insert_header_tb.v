@@ -56,22 +56,39 @@ clk = 1;
 rst_n = 0;
 
 // The header to be inserted to AXI Stream input
-valid_insert = 0;
-data_insert = 0;
-keep_insert = 0;
-byte_insert_cnt = 0;
+valid_insert = $urandom;
+data_insert = $urandom;
+byte_insert_cnt = $urandom($random);
+keep_insert = 4'b1111 >> 3 - byte_insert_cnt;
 // AXI Stream input original data
-valid_in = 0;
-data_in = 0;
-keep_in = 0;
+valid_in = $urandom;
+data_in = $urandom;
+keep_in = 4'b1111;
+last_in = 1'b0;
+// AXI Stream output with header inserted
+ready_out = $urandom;
+#(`clk_period*1);
+
+
+//////////////////////
+//transfer begin//////
+//////////////////////
+rst_n = 1;
+// The header to be inserted to AXI Stream input
+valid_insert = $urandom;
+data_insert = $urandom;
+byte_insert_cnt = $urandom($random);
+keep_insert = 4'b1111 >> 3 - byte_insert_cnt;
+// AXI Stream input original data
+valid_in = $urandom;
+data_in = $urandom;
+keep_in = 4'b1111 ;
 last_in = 0;
 // AXI Stream output with header inserted
-ready_out = 0;
+ready_out = $urandom;
+#(`clk_period*1);
 
-#(`clk_period*3);
-rst_n = 1;
-
-repeat(100)begin
+repeat(50)begin
 
 // The header to be inserted to AXI Stream input
 valid_insert = $urandom;
@@ -82,7 +99,7 @@ keep_insert = 4'b1111 >> 3 - byte_insert_cnt;
 valid_in = $urandom;
 data_in = $urandom;
 keep_in = 4'b1111;
-last_in = 1'b0;
+last_in = 0;
 // AXI Stream output with header inserted
 ready_out = $urandom;
 
@@ -95,56 +112,47 @@ data_insert = $urandom;
 byte_insert_cnt = $urandom;
 keep_insert = 4'b1111 >> 3 - byte_insert_cnt;
 // AXI Stream input original data
-valid_in = 0;
+valid_in = $urandom;
 data_in = $urandom;
-keep_in = 4'b1111 << $urandom;
-last_in = 1'b1;
+last_in = $urandom;
 // AXI Stream output with header inserted
-ready_out = 0;
-
+ready_out = $urandom;
 #(`clk_period*1);
 
+while(!(valid_in & ready_out)) begin
 // The header to be inserted to AXI Stream input
 valid_insert = $urandom;
 data_insert = $urandom;
 byte_insert_cnt = $urandom;
 keep_insert = 4'b1111 >> 3 - byte_insert_cnt;
 // AXI Stream input original data
-valid_in = 1;
+valid_in = $urandom;
 data_in = $urandom;
-keep_in = 4'b1111 << $urandom;
-last_in = 1'b1;
+last_in = $urandom;
+keep_in = last_in ? (4'b1111 << {$urandom}%4) : 4'b1111;
 // AXI Stream output with header inserted
-ready_out = 0;
-
+ready_out = $urandom;
 #(`clk_period*1);
+end
+
+//////////////////////
+//transfer finish/////
+//////////////////////
+
+repeat(5)begin
 // The header to be inserted to AXI Stream input
 valid_insert = $urandom;
 data_insert = $urandom;
 byte_insert_cnt = $urandom;
 keep_insert = 4'b1111 >> 3 - byte_insert_cnt;
 // AXI Stream input original data
-valid_in = 1;
+valid_in = $urandom;
 data_in = $urandom;
-keep_in = 4'b1111 << $urandom;
-last_in = 1'b1;
+last_in = $urandom;
 // AXI Stream output with header inserted
-ready_out = 1;
-
+ready_out = $urandom;
 #(`clk_period*1);
-
-// The header to be inserted to AXI Stream input
-valid_insert = 0;
-data_insert = 0;
-keep_insert = 0;
-byte_insert_cnt = 0;
-// AXI Stream input original data
-valid_in = 0;
-data_in = 0;
-keep_in = 0;
-last_in = 0;
-// AXI Stream output with header inserted
-ready_out = 1;
+end
 
 #(`clk_period*5);
 

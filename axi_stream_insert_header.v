@@ -37,8 +37,7 @@ reg [2*DATA_BYTE_WD-1:0] keep_r;
 reg valid_out_r;
 reg [DATA_WD-1:0] data_out_r;
 reg [DATA_BYTE_WD-1:0] keep_out_r;
-reg last_out_r1;
-reg last_out_r2;
+reg last_out_r;
 
 //valid signal of recieving data_in
 assign ready_in = ready_out;
@@ -46,28 +45,31 @@ assign ready_in = ready_out;
 //valid signal of recieving data_insert
 assign ready_insert = ready_out;
 
+//register valid_in
 always @(posedge clk, negedge rst_n) begin
     if(!rst_n)
     valid_in_r <= #1 1'b0;
-	 else 
-	 valid_in_r <= #1 valid_in;
+	else 
+	valid_in_r <= #1 valid_in;
 end
 
+//register ready_in
 always @(posedge clk, negedge rst_n) begin
     if(!rst_n)
     ready_in_r <= #1 1'b0;
-	 else 
-	 ready_in_r <= #1 ready_in;
+	else 
+	ready_in_r <= #1 ready_in;
 end
 
-//the state of AXI stream: 1 for start
+//register byte_insert_cnt
 always @(posedge clk, negedge rst_n) begin
     if(!rst_n)
-	 byte_insert_cnt_r <= #1 {(BYTE_CNT_WD){1'b0}};
-	 else if(!valid_s & valid_insert & valid_in & ready_in & ready_insert)
-	 byte_insert_cnt_r <= #1 byte_insert_cnt;
+	byte_insert_cnt_r <= #1 {(BYTE_CNT_WD){1'b0}};
+	else if(!valid_s & valid_insert & valid_in & ready_in & ready_insert)
+	byte_insert_cnt_r <= #1 byte_insert_cnt;
 end
 	 
+//the state of AXI stream: 1 for start
 always @(posedge clk, negedge rst_n) begin
     if(!rst_n)
     valid_s <= #1 1'b0;
@@ -77,18 +79,20 @@ always @(posedge clk, negedge rst_n) begin
     valid_s <= #1 1'b1;
 end
 
+//register valid_s
 always @(posedge clk, negedge rst_n) begin
     if(!rst_n)
     valid_s_r <= #1 1'b0;
-	 else 
-	 valid_s_r <= #1 valid_s;
+	else 
+	valid_s_r <= #1 valid_s;
 end
 assign valid_s1 = valid_s | valid_s_r;
-//register the data
+
+//save the data and keep
 always @(posedge clk, negedge rst_n) begin
     if(!rst_n)begin
-        data_r <= #1 {2*DATA_WD{1'b0}};
-        keep_r <= #1 {2*DATA_BYTE_WD{1'b0}};
+        data_r <= #1 {(DATA_WD << 1){1'b0}};
+        keep_r <= #1 {(DATA_BYTE_WD << 1){1'b0}};
     end
     else if(!valid_s & valid_insert & valid_in & ready_in & ready_insert)begin
         data_r <= #1 {data_insert, data_in};
@@ -105,44 +109,41 @@ end
 //last_out
 always @(posedge clk, negedge rst_n) begin
     if(!rst_n)
-    last_out_r1 <= #1 1'b0;
-    else if(last_in & valid_in & ready_in)
-    last_out_r1 <= #1 1'b1;
-    else if(valid_in_r & ready_in_r)
-    last_out_r1 <= #1 1'b0;
+    last_out_r <= #1 1'b0;
+    else if(last_in & valid_in & ready_in & !keep_r[byte_insert_cnt_r])
+    last_out_r <= #1 1'b1;
+	 else if(!valid_s1 & keep_r[byte_insert_cnt_r] & ready_in_r)
+	 last_out_r <= #1 1'b1;
+    else
+    last_out_r <= #1 1'b0;
 end
-always @(posedge clk, negedge rst_n) begin
-    if(!rst_n)
-    last_out_r2 <= #1 1'b0;
-	 else
-	 last_out_r2 <= #1 last_out_r1;
-end
-assign last_out = last_out_r2;
+assign last_out = last_out_r;
 
 //output data and keep_out
 always @(posedge clk, negedge rst_n) begin
 	if(!rst_n)begin
-			data_out_r <= #1 {DATA_WD{1'b0}};
-			keep_out_r <= #1 {DATA_BYTE_WD{1'b0}};
+		data_out_r <= #1 {DATA_WD{1'b0}};
+		keep_out_r <= #1 {DATA_BYTE_WD{1'b0}};
    end
    else if(valid_s1 & valid_in_r & ready_in_r)begin
-      data_out_r <= #1 data_r >> (byte_insert_cnt_r + 1)*8;
-      keep_out_r <= #1 keep_r >> (byte_insert_cnt_r + 1);
+        data_out_r <= #1 data_r >> ((byte_insert_cnt_r + 1) << 3);
+        keep_out_r <= #1 keep_r >> (byte_insert_cnt_r + 1);
    end
-   else if(keep_r[byte_insert_cnt_r] & valid_in_r & ready_in_r)begin
-		data_out_r <= #1 data_r << (3-byte_insert_cnt_r)*8;
+   else if(!valid_s1 & keep_r[byte_insert_cnt_r] & ready_in_r)begin
+		data_out_r <= #1 data_r << ((3-byte_insert_cnt_r) << 3);
 		keep_out_r <= #1 keep_r << (3-byte_insert_cnt_r);
 	end
 end
 assign data_out = data_out_r;
 assign keep_out = keep_out_r;
 
+//output valid_out
 always @(posedge clk, negedge rst_n) begin
 	if(!rst_n)
 	valid_out_r <= #1 1'b0;
 	else if(valid_s1 & valid_in_r & ready_in_r)
 	valid_out_r <= #1 1'b1;
-	else if(keep_r[byte_insert_cnt_r] & valid_in_r & ready_in_r)
+	else if(!valid_s1 & keep_r[byte_insert_cnt_r] & ready_in_r)
 	valid_out_r <= #1 1'b1;
 	else
 	valid_out_r <= #1 1'b0;
