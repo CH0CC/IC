@@ -115,6 +115,7 @@ keep_insert = 4'b1111 >> 3 - byte_insert_cnt;
 valid_in = $urandom;
 data_in = $urandom;
 last_in = $urandom;
+keep_in = last_in ? (4'b1111 << {$urandom}%4) : 4'b1111;
 // AXI Stream output with header inserted
 ready_out = $urandom;
 #(`clk_period*1);
