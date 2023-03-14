@@ -32,8 +32,8 @@ reg ready_in_r;
 reg valid_s;
 reg valid_s_r;
 wire valid_s1;
-reg [2*DATA_WD-1:0] data_r;
-reg [2*DATA_BYTE_WD-1:0] keep_r;
+reg [(DATA_WD << 1)-1:0] data_r;
+reg [(DATA_BYTE_WD << 1)-1:0] keep_r;
 reg valid_out_r;
 reg [DATA_WD-1:0] data_out_r;
 reg [DATA_BYTE_WD-1:0] keep_out_r;
@@ -112,8 +112,8 @@ always @(posedge clk, negedge rst_n) begin
     last_out_r <= #1 1'b0;
     else if(last_in & valid_in & ready_in & !keep_r[byte_insert_cnt_r])
     last_out_r <= #1 1'b1;
-	 else if(!valid_s1 & keep_r[byte_insert_cnt_r] & ready_in_r)
-	 last_out_r <= #1 1'b1;
+	else if(!valid_s1 & keep_r[byte_insert_cnt_r] & ready_in_r)
+	last_out_r <= #1 1'b1;
     else
     last_out_r <= #1 1'b0;
 end
